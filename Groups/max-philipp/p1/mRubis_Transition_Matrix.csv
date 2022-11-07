@@ -1,0 +1,20 @@
+﻿, Authentication Service, Availability Item Filter, Bid and Buy Service, Buy Now Item Filter, Category Item Filter, Comment Item Filter,Future Sales Item Filter, Inventory Service, Item Management Service, Last Second Sales Item Filter, Past Sales Item Filter,Persistence Service, Query Service, Recommendation Item Filter, Region Item Filter, Reputation Service, Seller Reputation Item Filter, User Management Service,Supervisor Component,Total
+ Authentication Service,0,0,0,0,0,0,0,0,0,0,0,0,100,0,0,0,0,0,0,100
+ Availability Item Filter,0,0,0,0,0,0,0,0,0,0,0,0,0,0,100,0,0,0,0,100
+ Bid and Buy Service,25,0,0,0,0,0,0,25,0,0,0,25,25,0,0,0,0,0,0,100
+ Buy Now Item Filter,0,100,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,100
+ Category Item Filter,0,0,0,0,0,0,0,0,0,0,0,0,0,100,0,0,0,0,0,100
+ Comment Item Filter,0,0,0,0,100,0,0,0,0,0,0,0,0,0,0,0,0,0,0,100
+Future Sales Item Filter,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,100,0
+ Inventory Service,0,0,0,0,0,0,0,0,0,0,0,50,50,0,0,0,0,0,0,100
+ Item Management Service,33,0,0,0,0,0,0,0,0,0,0,34,33,0,0,0,0,0,0,100
+ Last Second Sales Item Filter,0,0,0,0,0,0,0,0,0,0,100,0,0,0,0,0,0,0,0,100
+ Past Sales Item Filter,0,0,0,100,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,100
+Persistence Service,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,100,0
+ Query Service,0,0,0,0,0,0,0,0,0,100,0,0,0,0,0,0,0,0,0,100
+ Recommendation Item Filter,0,0,0,0,0,0,100,0,0,0,0,0,0,0,0,0,0,0,0,100
+ Region Item Filter,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,100,0,0,100
+ Reputation Service,33,0,0,0,0,0,0,0,0,0,0,34,33,0,0,0,0,0,0,100
+ Seller Reputation Item Filter,0,0,0,0,0,100,0,0,0,0,0,0,0,0,0,0,0,0,0,100
+ User Management Service,33,0,0,0,0,0,0,0,0,0,0,34,33,0,0,0,0,0,0,100
+Supervisor Component,17,0,17,0,0,0,0,17,17,0,0,0,0,0,0,17,0,17,0,100
