@@ -1,9 +1,9 @@
 from __future__ import annotations
 from dataclasses import dataclass
-import pandas as pd
 import numpy as np
-import typing
+import pandas as pd
 from tqdm import tqdm
+import typing
 
 
 def load_transitions():
@@ -19,142 +19,79 @@ def load_transitions():
 
 	return transitions
 
+def add_self_loops(transitions):
+	extended_transitions = transitions.copy()
+	for component in extended_transitions.index:
+		extended_transitions.loc[component, component] = 1 - extended_transitions.loc[component].sum()
+	return extended_transitions
 
-StateType = str
-ComponentType = str
-CompoundType = typing.Tuple[ComponentType, StateType]
+def add_supervisory_component(transitions):
+	supervisory_component = "Supervisory Component"
+	supervisory_outgoing = [
+		"Reputation Service", "Authentication Service",
+		"Bid and Buy Service", "Inventory Service",
+		"User Management Service",
+		"Item Management Service",
+		"Supervisory Component"
+	]
+
+	extended_transitions = transitions.copy()
+	extended_transitions[supervisory_component] = 0
+	extended_transitions[supervisory_component] = 1 - extended_transitions.sum(axis=1)
+	extended_transitions.loc[supervisory_component] = 0
+	extended_transitions.loc[supervisory_component, supervisory_outgoing] = 1 / (len(supervisory_outgoing))
+	return extended_transitions
+
 STATES: typing.List[StateType] = ['operational', 'degraded', 'unresponsive']
 
-
-@dataclass
-class TracePatternBuilder:
-	transitions: pd.DataFrame
-	compound: CompoundType
-
-	@property
-	def component(self):
-		return self.compound[0]
-
-	@property
-	def state(self):
-		return self.compound[1]
-
-	def next(self, component: ComponentType, state: StateType) -> CompoundType:
-		self.compound = (component, state)
-		return self.compound
-
-	def next_component(self) -> ComponentType:
-		return self.next(
-			np.random.choice(self.transitions.index, p=self.transitions.loc[self.component]),
-			self.state
-		)
-
-	def alternate_state(self, states: typing.List[StateType]) -> ComponentType:
-		return lambda: self.next(
-			self.component,
-			states[(states.index(self.state) + 1) % len(states)]
-		)
-
-	def next_state(self, state: StateType) -> ComponentType:
-		return lambda: self.next(
-			self.component,
-			state
-		)
-
-	def any_pattern(self, patterns: typing.List[TracePattern]) -> typing.List[CompoundType]:
-		name, pattern = TracePattern.random_applicable(patterns, self.compound)
-		return lambda: [
-			self.next(*compound)
-			for compound in pattern.apply(self.compound, self.transitions)
-		][-1]
-
-
-@dataclass
-class TracePattern:
-	applicable_states: typing.Optional[typing.List[StateType]]
-	transitions: typing.Callable[[TracePatternBuilder], typing.List[CompoundType]]
-
-	def can_apply(self, compound: CompoundType) -> bool:
-		if self.applicable_states is None:
-			return True
-		return compound[1] in self.applicable_states
-
-	def apply(self, compound: CompoundType, transitions) -> typing.List[CompoundType]:
-		return [
-			function()
-			for function in self.transitions(TracePatternBuilder(transitions, compound))
-		]
-
-	@staticmethod
-	def random_applicable(trace_patterns: typing.Dict[str, TracePattern], compound: CompoundType) -> typing.Tuple[str, TracePattern]:
-		applicable_patterns = [(name, pattern) for (name, pattern) in trace_patterns.items() if pattern.can_apply(compound)]
-		return applicable_patterns[np.random.choice(range(len(applicable_patterns)))]
-
-
-INTERMITTENT_STATES = ['operational', 'degraded']
-TRACE_PATTERNS = {
-	'normal operation': TracePattern(
-		applicable_states={'operational'},
-		transitions=lambda pattern: [pattern.next_component]),
-	'intermittent failure': TracePattern(
-		applicable_states=INTERMITTENT_STATES,
-		transitions=lambda pattern: [pattern.alternate_state(INTERMITTENT_STATES)]),
-	'systemic degradation': TracePattern(
-		applicable_states={'degraded'},
-		transitions=lambda pattern: [pattern.next_component]),
-	'failure masking': TracePattern(
-		applicable_states={'unresponsive'},
-		transitions=lambda pattern: [pattern.next_component, pattern.next_state('operational')]),
-	'failure cascade': TracePattern(
-		applicable_states={'degraded'},
-		transitions=lambda pattern: [pattern.any_pattern({
-			"1": TracePattern(
-				applicable_states=None,
-				transitions=lambda pattern: [pattern.next_state('unresponsive'), pattern.next_component]),
-			"2": TracePattern(
-				applicable_states=None,
-				transitions=lambda pattern: [pattern.next_component, pattern.next_state('unresponsive')])})])
-}
-
+def generate_transitions(component_transitions):
+	proportions = pd.DataFrame(
+		[[0.6, 0.15, 0.02], [0.3, 0.5, 0.1], [0.2, 0.2, 0.1]],
+		index=STATES,
+		columns=STATES
+	)
+	large_transitions = pd.DataFrame(
+		np.kron(component_transitions, proportions),
+		index=pd.MultiIndex.from_product([component_transitions.index, proportions.index]),
+		columns=pd.MultiIndex.from_product([component_transitions.columns, proportions.index])
+	)
+	# normalize row-wise
+	large_transitions = large_transitions.div(large_transitions.sum(axis=1), axis=0)
+	return large_transitions
 
 def random_walk(transitions, num_steps):
-	current_component = np.random.choice(transitions.index)
-	current_state = np.random.choice(STATES)
-	yield (current_component, current_state)
+	current_state = np.random.choice(transitions.index)
+	yield current_state
 	for _ in range(num_steps):
-		if transitions.loc[current_component].sum() == 0:
-			# break
-			yield (current_component, current_state)
-			continue
+		assert transitions.loc[current_state].sum().sum().round(2) == 1
 
-		name, trace_pattern = TracePattern.random_applicable(TRACE_PATTERNS, (current_component, current_state))
-		trace = trace_pattern.apply((current_component, current_state), transitions)
-		yield from trace
-		(current_component, current_state) = trace[-1]
+		current_state = np.random.choice(transitions.columns, p=transitions.loc[current_state])
+		yield current_state
 
 def random_walks(transitions, num_walks, num_steps):
 	for _ in tqdm(range(num_walks), desc='Generating random walks'):
 		yield list(random_walk(transitions, num_steps))
 
-def estimate_transition_matrix(transition_logs, components):
-	compound_states = [(component, state) for component in components for state in STATES]
+def estimate_transition_matrix(transition_logs, compound_states):
 	transition_matrix = pd.DataFrame(0, index=compound_states, columns=compound_states)
 	for log in tqdm(transition_logs, desc='Estimating transition matrix'):
 		for compound, next_compound in zip(log, log[1:]):
-			transition_matrix.loc[[compound], [next_compound]] += 1
+			transition_matrix.loc[compound, next_compound] += 1
 	transition_matrix = transition_matrix.div(transition_matrix.sum(axis=1), axis=0)
+	# remove all unreached components (suspicious, but keeps the DTMC valid)
+	transition_matrix = transition_matrix.loc[transition_matrix.sum(axis=1) > 0, transition_matrix.sum(axis=1) > 0]
 	return transition_matrix
 
-def visualize_dtmc(estimated_transition_matrix, distribution, png_path):
+def visualize_dtmc(estimated_transitions, distribution, png_path):
 	import graphviz
 	dot = graphviz.Digraph()
-	for compound in estimated_transition_matrix.index:
+	for compound in estimated_transitions.index:
 		# for the color of the node, use the probability in distribution (1=red, 0=transparent)
 		color = f'#{int(255 * distribution[compound]):02x}0000'
 		dot.node(str(compound), style='filled', fillcolor=color)
-	for compound in estimated_transition_matrix.index:
-		for next_compound in estimated_transition_matrix.index:
-			probability = estimated_transition_matrix.loc[[compound], [next_compound]].sum().sum()
+	for compound in estimated_transitions.index:
+		for next_compound in estimated_transitions.index:
+			probability = estimated_transitions.loc[[compound], [next_compound]].sum().sum()
 			if probability > 0:
 				dot.edge(str(compound), str(next_compound), label=f"{probability:.2f}")
 	dot.render(png_path)
@@ -197,32 +134,29 @@ def calculate_limiting_distribution(transitions):
 		for i in range(len(transitions.index))
 	})
 
-def main():
-	transitions = load_transitions()
+def main(completion_strategy=add_supervisory_component):
+	component_transitions = load_transitions()
+
+	component_transitions = completion_strategy(component_transitions)
+
+	transitions = generate_transitions(component_transitions)
 	logs = list(random_walks(transitions, 20, 100))
-	estimated_transition_matrix = estimate_transition_matrix(logs, transitions.index)
+	estimated_transitions = estimate_transition_matrix(logs, transitions.index)
 
-	# histogram of the ten likeliest values in the matrix
-	import matplotlib.pyplot as plt
-	plt.hist(estimated_transition_matrix.values.flatten(), bins=100)
-	plt.savefig('transition_matrix_histogram.png')
+	estimated_transitions = estimated_transitions.fillna(0)
 
-	estimated_transition_matrix = estimated_transition_matrix.fillna(0)
+	new_logs = list(random_walks(estimated_transition_matrix, 20, 100))
+	print(pd.Series(new_logs).apply(lambda log: log[-1]).value_counts().iloc[:10])
 
-	import pdb; pdb.set_trace()
-	limiting_distribution = calculate_limiting_distribution(estimated_transition_matrix)
+	limiting_distribution = calculate_limiting_distribution(estimated_transitions)
 
-	visualize_dtmc(estimated_transition_matrix, limiting_distribution, 'markov_chain.pdf')
-
-	# count nans in estimated_transition_matrix
-	number_of_nans = estimated_transition_matrix.isnull().sum().sum()
-	number_of_zeros = (estimated_transition_matrix == 0).sum().sum()
-	import pdb; pdb.set_trace()
+	visualize_dtmc(estimated_transitions, limiting_distribution, 'markov_chain.pdf')
 
 if __name__ == '__main__':
+	import pdb; pdb.set_trace()
 	main()
 
-# NEXT: Learn transition matrix from logs
+# NEXT: see below
 
 # tell me a joke
 # once upon a time there was a programmer who wanted to learn about markov chains
@@ -231,14 +165,9 @@ if __name__ == '__main__':
 # but suddenly, he realized that he had no idea how to calculate the limiting distribution of the markov chain
 # so he went to the internet and found a solution
 
-# what is a matrix determinant
-# in simple words, it's the area of a parallelogram formed by two vectors
-# to explain it to a 5-year-old, you can say that it's the area of a square formed by two vectors
-# det M :=
-
 # todos
+# - water matrix multiplication and animation
 # - visualize 1-loops
-# - why are sums of probabilities not 1?
 # - answer questions
-# - should we use supervisory component? do we need limiting distributions?
-# mo treffen wieder?
+
+# next meeting: tue 13:00 - 18:00
