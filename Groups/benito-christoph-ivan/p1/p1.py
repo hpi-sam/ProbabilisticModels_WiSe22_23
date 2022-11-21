@@ -6,8 +6,7 @@ from tqdm import tqdm
 import typing
 
 
-def load_transitions():
-	file_name = '../../ProjectDescriptions/mRubis_Transition_Matrix.xlsx'
+def load_transitions(file_name):
 	sheet_name = 'prior_transition_matrix'
 	num_components = 18
 
@@ -82,21 +81,6 @@ def estimate_transition_matrix(transition_logs, compound_states):
 	transition_matrix = transition_matrix.loc[transition_matrix.sum(axis=1) > 0, transition_matrix.sum(axis=1) > 0]
 	return transition_matrix
 
-def visualize_dtmc(estimated_transitions, distribution, png_path):
-	import graphviz
-	dot = graphviz.Digraph()
-	for compound in estimated_transitions.index:
-		# for the color of the node, use the probability in distribution (1=red, 0=transparent)
-		color = f'#{int(255 * distribution[compound]):02x}0000'
-		dot.node(str(compound), style='filled', fillcolor=color)
-	for compound in estimated_transitions.index:
-		for next_compound in estimated_transitions.index:
-			probability = estimated_transitions.loc[[compound], [next_compound]].sum().sum()
-			if probability > 0:
-				dot.edge(str(compound), str(next_compound), label=f"{probability:.2f}")
-	dot.render(png_path)
-	print(f"Markov chain visualization saved to {png_path}")
-
 def calculate_limiting_distribution(transitions):
 	# solve $\pi \cdot P = \pi \wedge \sum_{s\in S}{\pi(s)} = 1$ to $\pi$
 	# we express this as a linear system of equations and solve it using numpy
@@ -134,8 +118,36 @@ def calculate_limiting_distribution(transitions):
 		for i in range(len(transitions.index))
 	})
 
-def main(completion_strategy=add_supervisory_component):
-	component_transitions = load_transitions()
+def approximate_limiting_distribution_gen(transitions, num_steps):
+	distribution = pd.Series(1 / len(transitions), transitions.index)
+	for _ in range(num_steps):
+		yield (distribution := distribution.dot(transitions))
+
+def approximate_limiting_distribution(transitions, num_steps):
+	return list(approximate_limiting_distribution_gen(transitions, num_steps))[-1]
+
+def visualize_dtmc(estimated_transitions, distribution, png_path):
+	import graphviz
+
+	dot = graphviz.Digraph()
+	for compound in estimated_transitions.index:
+		# for the color of the node, use the probability in distribution (0=white, 1=red)
+		r = 1
+		g = b = 1 - (distribution[compound] / distribution.max())
+		color = f'#{int(r * 255):02x}{int(g * 255):02x}{int(b * 255):02x}'
+		dot.node(str(compound), style='filled', fillcolor=color)
+		# TODO: improve positioning?
+	for compound in estimated_transitions.index:
+		for next_compound in estimated_transitions.index:
+			probability = estimated_transitions.loc[[compound], [next_compound]].sum().sum()
+			if probability > 0:
+				dot.edge(str(compound), str(next_compound), label=f"{probability:.2f}")
+
+	dot.format = 'png'
+	dot.render(png_path)
+
+def main(completion_strategy=add_supervisory_component, anim=False):
+	component_transitions = load_transitions('../../../ProjectDescriptions/mRubis_Transition_Matrix.xlsx')
 
 	component_transitions = completion_strategy(component_transitions)
 
@@ -145,12 +157,32 @@ def main(completion_strategy=add_supervisory_component):
 
 	estimated_transitions = estimated_transitions.fillna(0)
 
-	new_logs = list(random_walks(estimated_transition_matrix, 20, 100))
-	print(pd.Series(new_logs).apply(lambda log: log[-1]).value_counts().iloc[:10])
-
-	limiting_distribution = calculate_limiting_distribution(estimated_transitions)
-
-	visualize_dtmc(estimated_transitions, limiting_distribution, 'markov_chain.pdf')
+	if anim:
+		for (i, distribution) in enumerate(tqdm(
+			approximate_limiting_distribution_gen(estimated_transitions, 100),
+			desc='Rendering limiting distribution',
+			total=100)):
+			visualize_dtmc(estimated_transitions, distribution, f'./dtmc_frame_{i}')
+		# TODO: this is still very slow - took 30 minutes on my machine. run with caution!
+		import subprocess
+		subprocess.run([
+			'ffmpeg',
+			'-y',
+			'-framerate', '10',
+			'-i', './dtmc_frame_%d.png',
+			'-c:v', 'libx264',
+			'-vf', 'pad=ceil(iw/2)*2:ceil(ih/2)*2',
+			'-profile:v', 'high',
+			'-crf', '20',
+			'-pix_fmt', 'yuv420p',
+			'./dtmc.mp4'
+		])
+		# remove intermediate images
+		import glob
+		for path in glob.glob('./dtmc_frame_*.png'):
+			os.remove(path)
+	limiting_distribution = approximate_limiting_distribution(estimated_transitions, 100)
+	visualize_dtmc(estimated_transitions, limiting_distribution, f'./dtmc')
 
 if __name__ == '__main__':
 	import pdb; pdb.set_trace()
@@ -166,8 +198,11 @@ if __name__ == '__main__':
 # so he went to the internet and found a solution
 
 # todos
-# - water matrix multiplication and animation
-# - visualize 1-loops
 # - answer questions
+# - chris:
+#   > Use this discussion of self-loops and supervisory component to solidify your understanding of the Markov Chain properties of being reducible and irreducible, periodic, which relate to being ergodic...
+# - visualize *convergence* to steady state
+#   > It could as simply as line charts of the probability of each state or something more elaborate like some cumulative regret of how much each state is, at any given moment, distant from the its steady state probability. This will also show you that certain states take longer to achieve their steady state probability, simply because they are more seldomly visited.
+# - do we want to reconsider the analytical solution?
 
 # next meeting: tue 13:00 - 18:00
