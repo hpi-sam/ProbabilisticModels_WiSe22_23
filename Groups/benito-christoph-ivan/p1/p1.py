@@ -150,7 +150,9 @@ def visualize_dtmc(estimated_transitions, distribution, max_probability, png_pat
 		for next_compound in estimated_transitions.index:
 			probability = estimated_transitions.loc[[compound], [next_compound]].sum().sum()
 			if probability > 0:
-				dot.edge(str(compound), str(next_compound), label=f"{probability:.2f}")
+				r = g = b = 1 - (probability / estimated_transitions.max().max())
+				color = f'#{int(r * 255):02x}{int(g * 255):02x}{int(b * 255):02x}'
+				dot.edge(str(compound), str(next_compound), label=f"{probability:.2f}", color=color, fontcolor=color)
 
 	dot.format = 'png'
 	dot.render(png_path)
