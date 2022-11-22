@@ -4,6 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import numpy as np
 import pandas as pd
+import pickle
 from tqdm import tqdm
 import typing
 
@@ -293,17 +294,48 @@ def create_pie_charts(limiting_distribution):
 	)
 	plt.savefig('./limiting_distribution_states.png')
 
-def main(completion_strategy=add_supervisory_component, visualize=None):
+def main(completion_strategy=add_supervisory_component, logs_cache_flags=['load', 'store'], dtmc_cache_flags=['load', 'store'], visualize=None):
 	component_transitions = load_transitions('../../../ProjectDescriptions/mRubis_Transition_Matrix.xlsx')
 
 	component_transitions = completion_strategy(component_transitions)
 	component_transitions = add_self_loops(component_transitions)
 
 	transitions = generate_transitions(component_transitions)
-	logs = list(random_walks(transitions, 100, 100)) # TODO: cache and more
-	estimated_transitions = estimate_transition_matrix(logs, transitions.index)
 
-	estimated_transitions = estimated_transitions.fillna(0)
+	estimated_transitions = None
+	if 'load' in dtmc_cache_flags:
+		print("Loading transitions from cache...", end='')
+		try:
+			with open('./transitions.pickle', 'rb') as f:
+				estimated_transitions = pickle.load(f)
+			print('done')
+		except FileNotFoundError:
+			print("no cache found")
+	if estimated_transitions is None:
+		logs = None
+		if 'load' in logs_cache_flags:
+			print("Loading logs from cache...", end='')
+			try:
+				with open('./logs.pickle', 'rb') as f:
+					logs = pickle.load(f)
+				print('done')
+			except FileNotFoundError:
+				print("no cache found")
+		if logs is None:
+			logs = list(random_walks(transitions, 1000, 1000))
+		if 'store' in logs_cache_flags:
+			print("Storing logs in cache...", end='')
+			with open('./logs.pickle', 'wb') as f:
+				pickle.dump(logs, f)
+			print("done")
+
+		estimated_transitions = estimate_transition_matrix(logs, transitions.index)
+		estimated_transitions = estimated_transitions.fillna(0)
+	if 'store' in dtmc_cache_flags:
+		print("Storing transitions in cache...", end='')
+		with open('./transitions.pickle', 'wb') as f:
+			pickle.dump(estimated_transitions, f)
+		print("done")
 
 	limiting_distribution, limiting_distributions = calculate_and_visualize_limiting_distribution(estimated_transitions, visualize)
 	create_pie_charts(limiting_distribution)
@@ -324,10 +356,9 @@ if __name__ == '__main__':
 # so he went to the internet and found a solution
 
 # todos
-# - normalize animation frames
 # - answer questions
 # - defer for presentation? chris:
 #   > Use this discussion of self-loops and supervisory component to solidify your understanding of the Markov Chain properties of being reducible and irreducible, periodic, which relate to being ergodic...
 # - do we want to reconsider the analytical solution?
 
-# next meeting: tue 13:00 - 18:00
+# next meeting: to be determined
