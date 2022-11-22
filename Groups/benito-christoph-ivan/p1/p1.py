@@ -175,65 +175,66 @@ def answer_questions(transitions, distributions):
 	for n in [10, 20, 30]:
 		print(f"After {n} steps:")
 
-		print("What is the probability of seeing a failure cascade that affects only component 1 (Bid and Buy Service)?")
+		print("  What is the probability of seeing a failure cascade that affects only component 1 (Bid and Buy Service)?")
 		result = sum(
 			distributions[i][(component, 'degraded')] * transitions.loc[(component, 'degraded'), ('Bid and Buy Service', 'degraded')] * transitions.loc[('Bid and Buy Service', 'degraded'), ('Bid and Buy Service', 'unresponsive')]
 			for component in transitions.index.get_level_values(0).unique().difference(['Bid and Buy Service'])
 			for i in range(0, n + 1 - 2)
 		) / (n + 1 - 2)
-		print(result)
+		print(f"    {result:.2f}")
 
-		print("What is the probability of seeing a failure cascade that affects component 2 (Item Management Service)?")
+		print("  What is the probability of seeing a failure cascade that affects component 2 (Item Management Service)?")
 		result = sum(
 			distributions[i][(component, 'degraded')] * (
 				transitions.loc[(component, 'degraded'), (component, 'unresponsive')] * transitions.loc[(component, 'unresponsive'), ('Item Management Service', 'unresponsive')]
 				+
 				transitions.loc[(component, 'degraded'), ('Item Management Service', 'degraded')] * transitions.loc[('Item Management Service', 'degraded'), ('Item Management Service', 'unresponsive')]
+			)
 			for component in transitions.index.get_level_values(0).unique().difference(['Item Management Service'])
 			for i in range(0, n + 1 - 2)
 		) / (n + 1 - 2)
-		print(result)
+		print(f"    {result:.2f}")
 
-		print("What is the probability of seeing a failure masking?")
+		print("  What is the probability of seeing a failure masking?")
 		result = sum(
 			distributions[i][(component_1, 'unresponsive')] * transitions.loc[(component_1, 'unresponsive'), (component_2, 'unresponsive')] * transitions.loc[(component_2, 'unresponsive'), (component_1, 'operational')]
 			for component_1 in transitions.index.get_level_values(0).unique()
 			for component_2 in transitions.index.get_level_values(0).unique().difference([component_1])
 			for i in range(0, n + 1 - 2)
 		) / (n + 1 - 2)
-		print(result)
+		print(f"    {result:.2f}")
 
-		print("What is the probability of seeing a systemic degradation?")
+		print("  What is the probability of seeing a systemic degradation?")
 		result = sum(
 			distributions[i][(component_1, 'degraded')] * transitions.loc[(component_1, 'degraded'), (component_2, 'degraded')]
 			for component_1 in transitions.index.get_level_values(0).unique()
 			for component_2 in transitions.index.get_level_values(0).unique().difference([component_1])
 			for i in range(0, n + 1 - 1)
 		) / (n + 1 - 1)
-		print(result)
+		print(f"    {result:.2f}")
 
-		print("What is the probability of normal operation?")
+		print("  What is the probability of normal operation?")
 		result = sum(
 			distributions[i][(component, 'operational')]
 			for component in transitions.index.get_level_values(0).unique()
 			for i in range(0, n + 1)
 		) / (n + 1)
-		print(result)
+		print(f"    {result:.2f}")
 
-		print("What is the probability of having 1, 2, or more intermittent failures?")
+		print("  What is the probability of having 1, 2, or more intermittent failures?")
 		result = sum(
 			distributions[i][(component, 'operational')] * transitions.loc[(component, 'operational'), (component, 'degraded')] * transitions.loc[(component, 'degraded'), (component, 'operational')]
 			for component in transitions.index.get_level_values(0).unique()
 			for i in range(0, n + 1 - 2)
 		) / (n + 1 - 2)
-		print(result)
+		print(f"    {result:.2f}")
 
-		print("In the case of an intermittent failure, what is the probability of a failure cascade?")
+		print("  In the case of an intermittent failure, what is the probability of a failure cascade?")
 		# TODO: Does "in the case" mean "immediately after", "at any time after", or that the failure cascade takes place in the middle of the intermittent failure?
 
-		print("In the case of a failure cascade, what is the probability of failure masking?")
+		print("  In the case of a failure cascade, what is the probability of failure masking?")
 
-		print("Extra - In the case of an intermittent failure, what is the probability of failure masking?")
+		print("  Extra - In the case of an intermittent failure, what is the probability of failure masking?")
 		# TODO
 
 def calculate_and_visualize_limiting_distribution(transitions, visualize):
