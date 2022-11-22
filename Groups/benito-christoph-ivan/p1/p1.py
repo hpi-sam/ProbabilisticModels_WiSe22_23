@@ -136,14 +136,13 @@ def approximate_limiting_distribution_gen(transitions, num_steps):
 def approximate_limiting_distribution(transitions, num_steps):
 	return list(approximate_limiting_distribution_gen(transitions, num_steps))[-1]
 
-def visualize_dtmc(estimated_transitions, distribution, png_path):
+def visualize_dtmc(estimated_transitions, distribution, max_probability, png_path):
 	import graphviz
 
 	dot = graphviz.Digraph()
 	for compound in estimated_transitions.index:
-		# for the color of the node, use the probability in distribution (0=white, 1=red)
 		r = 1
-		g = b = 1 - (distribution[compound] / distribution.max())
+		g = b = 1 - (distribution[compound] / max_probability)
 		color = f'#{int(r * 255):02x}{int(g * 255):02x}{int(b * 255):02x}'
 		dot.node(str(compound), style='filled', fillcolor=color)
 		# TODO: improve positioning? (optional)
@@ -244,7 +243,7 @@ def calculate_and_visualize_limiting_distribution(transitions, visualize):
 			limiting_distributions,
 			desc='Rendering limiting distribution',
 			total=100)):
-			visualize_dtmc(transitions, distribution, f'./dtmc_frame_{i}')
+			visualize_dtmc(transitions, distribution, max(dist.max() for dist in limiting_distributions), f'./dtmc_frame_{i}')
 		# TODO: this is still very slow - took 30 minutes on my machine. run with caution!
 		import subprocess
 		subprocess.run([
@@ -264,7 +263,7 @@ def calculate_and_visualize_limiting_distribution(transitions, visualize):
 		for path in glob.glob('./dtmc_frame_*.png'):
 			os.remove(path)
 	elif visualize == 'static':
-		visualize_dtmc(transitions, limiting_distribution, f'./dtmc')
+		visualize_dtmc(transitions, limiting_distribution, limiting_distribution.max(), f'./dtmc')
 
 	return limiting_distribution, limiting_distributions
 
