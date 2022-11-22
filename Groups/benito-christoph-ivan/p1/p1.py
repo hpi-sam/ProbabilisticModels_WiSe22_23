@@ -23,8 +23,7 @@ def load_transitions(file_name):
 def add_self_loops(transitions, probability=0.5):
 	extended_transitions = transitions.copy()
 	for component in extended_transitions.index:
-		# TODO: denormalize probability (optional)
-		extended_transitions.loc[component, component] = probability
+		extended_transitions.loc[component, component] = probability / (1 - probability)  # denormalized
 	# normalize row-wise
 	extended_transitions = extended_transitions.div(extended_transitions.sum(axis=1), axis=0)
 	return extended_transitions
