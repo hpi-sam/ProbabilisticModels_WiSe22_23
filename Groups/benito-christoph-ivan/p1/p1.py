@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 
 from __future__ import annotations
-from dataclasses import dataclass
+import glob
 import numpy as np
 import pandas as pd
+import os
 import pickle
 from tqdm import tqdm
 import typing
@@ -263,7 +264,6 @@ def calculate_and_visualize_limiting_distribution(transitions, visualize):
 			'./dtmc.mp4'
 		])
 		# remove intermediate images
-		import glob
 		for path in glob.glob('./dtmc_frame_*.png'):
 			os.remove(path)
 	elif visualize == 'static':
