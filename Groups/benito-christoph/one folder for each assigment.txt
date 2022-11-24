@@ -1,1 +1,0 @@
-Please create one folder for each project, e.g., p1, p2, p3, p4, etc.
