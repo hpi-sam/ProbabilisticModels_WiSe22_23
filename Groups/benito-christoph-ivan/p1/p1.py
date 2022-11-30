@@ -138,7 +138,7 @@ def approximate_limiting_distribution_gen(transitions, num_steps):
 def approximate_limiting_distribution(transitions, num_steps):
 	return list(approximate_limiting_distribution_gen(transitions, num_steps))[-1]
 
-def visualize_dtmc(estimated_transitions, distribution, max_probability, png_path):
+def visualize_dtmc(estimated_transitions, distribution, max_probability, file_path, file_format='png'):
 	import graphviz
 
 	dot = graphviz.Digraph()
@@ -156,8 +156,8 @@ def visualize_dtmc(estimated_transitions, distribution, max_probability, png_pat
 				color = f'#{int(r * 255):02x}{int(g * 255):02x}{int(b * 255):02x}'
 				dot.edge(str(compound), str(next_compound), label=f"{probability:.2f}", color=color, fontcolor=color)
 
-	dot.format = 'png'
-	dot.render(png_path)
+	dot.format = file_format
+	dot.render(file_path)
 
 def answer_questions(transitions, distributions):
 	# Types of traces:
@@ -183,7 +183,7 @@ def answer_questions(transitions, distributions):
 			for component in transitions.index.get_level_values(0).unique().difference(['Bid and Buy Service'])
 			for i in range(0, n + 1 - 2)
 		) / (n + 1 - 2)
-		print(f"    {result:.2f}")
+		print(f"    {result:.5f}")
 
 		print("  What is the probability of seeing a failure cascade that affects component 2 (Item Management Service)?")
 		result = sum(
@@ -195,7 +195,7 @@ def answer_questions(transitions, distributions):
 			for component in transitions.index.get_level_values(0).unique().difference(['Item Management Service'])
 			for i in range(0, n + 1 - 2)
 		) / (n + 1 - 2)
-		print(f"    {result:.2f}")
+		print(f"    {result:.5f}")
 
 		print("  What is the probability of seeing a failure masking?")
 		result = sum(
@@ -204,7 +204,7 @@ def answer_questions(transitions, distributions):
 			for component_2 in transitions.index.get_level_values(0).unique().difference([component_1])
 			for i in range(0, n + 1 - 2)
 		) / (n + 1 - 2)
-		print(f"    {result:.2f}")
+		print(f"    {result:.5f}")
 
 		print("  What is the probability of seeing a systemic degradation?")
 		result = sum(
@@ -213,7 +213,7 @@ def answer_questions(transitions, distributions):
 			for component_2 in transitions.index.get_level_values(0).unique().difference([component_1])
 			for i in range(0, n + 1 - 1)
 		) / (n + 1 - 1)
-		print(f"    {result:.2f}")
+		print(f"    {result:.5f}")
 
 		print("  What is the probability of normal operation?")
 		result = sum(
@@ -221,7 +221,7 @@ def answer_questions(transitions, distributions):
 			for component in transitions.index.get_level_values(0).unique()
 			for i in range(0, n + 1)
 		) / (n + 1)
-		print(f"    {result:.2f}")
+		print(f"    {result:.5f}")
 
 		print("  What is the probability of having 1, 2, or more intermittent failures?")
 		result = sum(
@@ -229,15 +229,21 @@ def answer_questions(transitions, distributions):
 			for component in transitions.index.get_level_values(0).unique()
 			for i in range(0, n + 1 - 2)
 		) / (n + 1 - 2)
-		print(f"    {result:.2f}")
+		print(f"    {result:.5f}")
 
 		print("  In the case of an intermittent failure, what is the probability of a failure cascade?")
-		# TODO: Does "in the case" mean "immediately after", "at any time after", or that the failure cascade takes place in the middle of the intermittent failure?
+		result = 0
+		print(f"    {result:.5f} - After an intermittent failure, the current state is operational. So it cannot cause an immediate failure cascade.")
 
 		print("  In the case of a failure cascade, what is the probability of failure masking?")
-
-		print("  Extra - In the case of an intermittent failure, what is the probability of failure masking?")
-		# TODO
+		# c1/degraded -> c1/unresponsive -> c2/unresponsive -> c1/operational or c1/degraded -> c2/degraded -> c2/unresponsive -> c1/operational
+		result = sum(
+			distributions[i][(component_1, 'degraded')] * transitions.loc[(component_1, 'degraded'), (component_1, 'unresponsive')] * transitions.loc[(component_1, 'unresponsive'), (component_2, 'unresponsive')] * transitions.loc[(component_2, 'unresponsive'), (component_1, 'operational')] + \
+			distributions[i][(component_1, 'degraded')] * transitions.loc[(component_1, 'degraded'), (component_2, 'degraded')] * transitions.loc[(component_2, 'degraded'), (component_2, 'unresponsive')] * transitions.loc[(component_2, 'unresponsive'), (component_1, 'operational')]
+			for component_1 in transitions.index.get_level_values(0).unique()
+			for component_2 in transitions.index.get_level_values(0).unique().difference([component_1])
+			for i in range(0, n + 1 - 3)
+		) / (n + 1 - 3)
 
 def calculate_and_visualize_limiting_distribution(transitions, visualize):
 	limiting_distributions = list(approximate_limiting_distribution_gen(transitions, 100))
@@ -267,7 +273,7 @@ def calculate_and_visualize_limiting_distribution(transitions, visualize):
 		for path in glob.glob('./dtmc_frame_*.png'):
 			os.remove(path)
 	elif visualize == 'static':
-		visualize_dtmc(transitions, limiting_distribution, limiting_distribution.max(), f'./dtmc')
+		visualize_dtmc(transitions, limiting_distribution, limiting_distribution.max(), f'./dtmc', 'pdf')
 
 	return limiting_distribution, limiting_distributions
 
@@ -337,6 +343,13 @@ def main(completion_strategy=add_supervisory_component, logs_cache_flags=['load'
 			pickle.dump(estimated_transitions, f)
 		print("done")
 
+	print("Error calculation of estimations:")
+	print(f"Mean absolute error: {(estimated_transitions - transitions).abs().mean().mean():.5f}")
+	print(f"Max absolute error: {(estimated_transitions - transitions).abs().mean().mean():.5f}")
+	print(f"Mean relative error: {(estimated_transitions - transitions).div(estimated_transitions).abs().mean().mean():.5f}")
+	print(f"Max relative error: {(estimated_transitions - transitions).div(estimated_transitions).abs().max().max():.5f}")
+	# TODO (highly optional): distribution chart
+
 	limiting_distribution, limiting_distributions = calculate_and_visualize_limiting_distribution(estimated_transitions, visualize)
 	create_pie_charts(limiting_distribution)
 
@@ -356,9 +369,7 @@ if __name__ == '__main__':
 # so he went to the internet and found a solution
 
 # todos
-# - answer questions
 # - defer for presentation? chris:
 #   > Use this discussion of self-loops and supervisory component to solidify your understanding of the Markov Chain properties of being reducible and irreducible, periodic, which relate to being ergodic...
-# - do we want to reconsider the analytical solution?
 
-# next meeting: to be determined
+# next meeting: wed ~17:30
