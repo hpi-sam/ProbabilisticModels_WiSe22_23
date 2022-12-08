@@ -42,22 +42,21 @@ def quantize_observations(observations):
 		for state in observation
 	))
 	numeric_observations = [
-		[[states.index(state)] for state in observation]
+		[states.index(state) for state in observation]
 		for observation in observations
 	]
 	return states, numeric_observations
 
 def unquantize_states(states, numeric_states):
 	return [
-		[numeric_states[state[0]] for state in observation]
+		[numeric_states[state] for state in observation]
 		for observation in states
 	]
 
 def learn_hmm(observations, n_components, n_iter=1000):
-	model = hmm.MultinomialHMM(n_components=n_components, n_iter=n_iter, verbose=True)
+	model = hmm.CategoricalHMM(n_components=n_components, n_iter=n_iter, verbose=True)
 
-	concatenated_observations = np.concatenate(observations)
-	model.fit(concatenated_observations, lengths=[len(observation) for observation in observations])
+	model.fit(np.array(observations[:5]).T) # todo: see latest questions in minimial_hmm.py
 
 	return model
 
@@ -112,8 +111,10 @@ def main(logs_cache_flags=['load', 'store'], observations_cache_flags=['load', '
 	numeric_states, numeric_observations = quantize_observations(observations)
 
 	estimated_model = learn_hmm(numeric_observations, n_components=transitions.shape[0])
+	#estimated_model = learn_hmm(observations, n_components=transitions.shape[0])
 
 	predicted_numeric_states = list(predict_states(estimated_model, numeric_observations))
+	#numeric_states = list(predict_states(estimated_model, observations))
 	import pdb; pdb.set_trace()
 	predicted_states = unquantize_states(predicted_numeric_states, numeric_states)
 
@@ -121,5 +122,4 @@ if __name__ == '__main__':
 	import pdb; pdb.set_trace()
 	main()
 
-# next meeting: thu 9.30 and 17.30
-# ct: ask questions about multinomial & terminology
+# next meeting: ???
