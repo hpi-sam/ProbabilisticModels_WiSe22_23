@@ -172,7 +172,6 @@ def answer_questions(transitions, distributions):
 	# Failure cascade:
 	#   c1/degraded -> c1/unresponsive -> c2/unresponsive
 	#   c1/degraded -> c2/degraded -> c2/unresponsive
-	import pdb; pdb.set_trace()
 
 	for n in [10, 20, 30]:
 		print(f"After {n} steps:")
