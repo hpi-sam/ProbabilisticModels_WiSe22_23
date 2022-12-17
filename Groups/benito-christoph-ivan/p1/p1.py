@@ -299,13 +299,17 @@ def create_pie_charts(limiting_distribution):
 	)
 	plt.savefig('./limiting_distribution_states.png')
 
-def main(completion_strategy=add_supervisory_component, logs_cache_flags=['load', 'store'], dtmc_cache_flags=['load', 'store'], visualize=None):
+def main(completion_strategy=add_supervisory_component, original_dtmc_flags=['store'], logs_cache_flags=['load', 'store'], dtmc_cache_flags=['load', 'store'], visualize=None):
 	component_transitions = load_transitions('../../../ProjectDescriptions/mRubis_Transition_Matrix.xlsx')
 
 	component_transitions = completion_strategy(component_transitions)
 	component_transitions = add_self_loops(component_transitions)
 
 	transitions = generate_transitions(component_transitions)
+	if 'store' in original_dtmc_flags:
+		print("Storing original transitions to cache...", end='')
+		with open('./original_transitions.pickle', 'wb') as f:
+			pickle.dump(transitions, f)
 
 	estimated_transitions = None
 	if 'load' in dtmc_cache_flags:
