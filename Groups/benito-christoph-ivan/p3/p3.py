@@ -361,5 +361,5 @@ if __name__ == "__main__":
 
 
 # TODOs:
+# - why does convergence look differently than on the slides? play again with hyperparameters
 # - improve discussion of insights, see TODO above
-# - find out what else should be done - we picked one of the "project alternatives" and discussed the "suggested questions to answer" based on this project, but these tasks seem to poorly align with the "goals" (we did not use HMMs, self-healing, or failure patterns)
