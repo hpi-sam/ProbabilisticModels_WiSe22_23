@@ -363,3 +363,4 @@ if __name__ == "__main__":
 # TODOs:
 # - why does convergence look differently than on the slides? play again with hyperparameters
 # - improve discussion of insights, see TODO above
+# - prepare charts in demonstrable form
