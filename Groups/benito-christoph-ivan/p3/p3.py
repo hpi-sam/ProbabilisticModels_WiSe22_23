@@ -17,6 +17,7 @@ import numpy as np
 import os
 import pandas as pd
 import sys
+import time
 from tqdm import tqdm
 
 
@@ -209,6 +210,7 @@ class Game:
         self.agent = agent
         self.display_flags = display_flags
         self.scores = []
+        self.profile_results = None
 
     score = 0
 
@@ -217,6 +219,7 @@ class Game:
         self.agent.reset()
         self.state = self.env.state
         scores = [self.score]
+        start_time = time.time()
 
         if 'out' in self.display_flags:
             print("Episode", len(self.scores) + 1)
@@ -234,6 +237,17 @@ class Game:
                 print("Action:", action, f"({'◀🔽▶🔼'[action]})")
 
             next_state, reward, done, _ = self.env.step(action)
+
+            if self.profile_results is not None:
+                self.profile_results.append(
+                    {
+                        "state": self.state,
+                        "next_state": next_state,
+                        "time_index": len(self.profile_results),
+                        "time": time.time() - start_time
+                    }
+                )
+
             self.agent.update(self.state, action, reward, next_state)
             self.score += reward
             self.state = next_state
@@ -260,9 +274,9 @@ class Game:
             self.agent = old_agent
             self.scores.pop()
 
-    def play_nongreedy(self):
+    def play_nongreedy(self, epsilon=0):
         with self.freeze():
-            self.agent.epsilon = 0
+            self.agent.epsilon = epsilon
             self.play()
 
     def render(self):
@@ -273,7 +287,7 @@ class Game:
 
 def train(game, args):
     scores = []
-    for episode in (bar := tqdm(range(20000)) if args[0] != "user" else forever()):
+    for episode in (bar := tqdm(range(2000)) if args[0] != "user" else forever()):
         game.play()
 
         if episode % 1 == 0:
@@ -291,18 +305,41 @@ def train(game, args):
     return scores
 
 
-def output_scores(scores, scores_file_or_fd):
-    if scores_file_or_fd is None:
+def profile(game, args, num_episodes=500):
+    profile_results = pd.DataFrame(columns=["episode", "state", "next_state", "time_index", "time"])
+    for episode in (bar := tqdm(range(num_episodes)) if args[0] != "user" else forever()):
+        game.profile_results = []
+        game.play_nongreedy(epsilon=0.5)
+        profile_results = pd.concat(
+            [
+                profile_results,
+                pd.DataFrame(
+                    game.profile_results,
+                    index=[episode] * len(game.profile_results)
+                ).assign(episode=episode)
+            ],
+            ignore_index=True)
+    game.profile_results = None
+    return profile_results
+
+
+@contextmanager
+def output(file_or_fd):
+    if file_or_fd is None:
         return
-    if isinstance(scores_file_or_fd, int):
+    if isinstance(file_or_fd, int):
         try:
-            f = os.fdopen(scores_file_or_fd, 'w')
+            f = os.fdopen(file_or_fd, 'w')
         except OSError:
             return
     else:
-        f = open(scores_file_or_fd, 'w')
+        f = open(file_or_fd, 'w')
 
     with f:
+        yield f
+
+def output_scores(scores, scores_file_or_fd):
+    with output(scores_file_or_fd) as f:
         df = pd.DataFrame(scores)
         df.to_csv(f, index=False, header=False)
 
@@ -354,6 +391,12 @@ def main(args, scores_file_or_fd=3):
             scores = train(game, args)
         output_scores(scores, scores_file_or_fd + '_shifted' if isinstance(scores_file_or_fd, str) else scores_file_or_fd + 2)
         env.goal = old_goal
+
+    if any(x in args for x in ('--profile',)):
+        print("Profiling")
+        profile_results = profile(game, args)
+        with output(scores_file_or_fd + '_profile' if isinstance(scores_file_or_fd, str) else scores_file_or_fd + 3) as f:
+            profile_results.to_csv(f, index=False)
 
 
 if __name__ == "__main__":
