@@ -2,6 +2,10 @@ import ast
 import numpy as np
 import pandas as pd
 import scipy
+from sympy import Matrix, S
+import warnings
+
+from p4_1 import limiting_distribution
 
 
 def main():
@@ -22,9 +26,14 @@ def main():
 
     #print(profile_results)
 
+    G = generator_matrix(profile_results)
+    ld = limiting_distribution(G)
+    print("Limiting distribution:")
+    print(ld)
+
     visualize(profile_results)
 
-    # TODO NEXT: add remaining states as NaN, use code from p4_1 to compute limiting distribution. should we set a high epsilon in p3 for covering more states?
+    # TODO NEXT: limiting distribution is not solvable because MC is not irreducible
 
 
 def fit(times):
@@ -37,6 +46,25 @@ def fit(times):
     return λ, stddev
 
 
+def generator_matrix(profile_results):
+    width = max([t[0] for [s, t] in profile_results.index.values]) + 1
+    height = max([t[1] for [s, t] in profile_results.index.values]) + 1
+    G = Matrix(np.zeros((width * height, width * height)))
+
+    for i in range(width * height):
+        s = (i % width, i // width)
+        for j in range(width * height):
+            if i != j:
+                t = (j % width, j // width)
+                try:
+                    G[i, j] = S(profile_results.xs((s, t))['λ'])
+                except KeyError:
+                    if sum(abs(v - w) for v, w in zip(s, t)) == 1 and s[1] != height - 1 != t[1]:
+                        warnings.warn(f"No transition rate known from state {s} to adjacent {t}, proceeding with {0}")
+                    G[i, j] = S(0)
+                G[i, i] -= G[i, j]
+
+    return G
 
 
 def visualize(profile_results):
