@@ -49,7 +49,7 @@ See `random_walks()` and `estimate_transition_matrix()`.
 See `approximate_limiting_distribution()` and `visualize_dtmc()`.
 
 - `approximate_limiting_distribution()` multiplies the transition matrix with itself for each step (it is an approximation only because the iterative approach does not allow for passing an infinite `num_steps` parameter).
-  - We also considered a closed-form solution for computing the limiting distribution by solving $\pi \cdot P = \pi \wedge \sum_{s\in S}{\pi(s)} = 1$ to $\pi$ using `sympy`. However, this approach is not feasible because the transition matrix is too large to be solved by `sympy`. However, this would require us to reduce the DTMC first and identify its BSCCs, so we discontinued this approach.
+  - We also considered a closed-form solution for computing the limiting distribution by solving $\pi \cdot P = \pi \wedge \sum_{s\in S}{\pi(s)} = 1$ to $\pi$ using `sympy`. However, this would require us to reduce the DTMC first and identify its BSCCs, so we discontinued this approach.
 - `visualize_dtmc()` visualizes the DTMC using the `graphviz` library. The nodes are colored based on the limiting distribution and the edges are colored based on the transition probabilities.
 
 Additionally, we created an animation that displays the convergence of the DTMC in `calculate_and_visualize_limiting_distribution()` by rendering the DTMC for a series of points in time and combining them into a video using `ffmpeg`.

@@ -38,7 +38,7 @@ def main():
 
 def fit(times):
     X = np.sort(times)
-    Y = np.array([len(times[times <= x]) / len(times) for x in X])
+    Y = np.array([len(times[times <= x]) / len(times) for x in X])  # CDF
 
     (λ,), x = scipy.optimize.curve_fit(lambda t, λ: 1 - np.exp(-λ * t), X, Y, p0=(1,))
     stddev = np.sqrt(np.diag(x))[0]

@@ -55,7 +55,7 @@ def unquantize_states(numeric_states, numeric_emissions):
 		for numeric_state in numeric_states
 	]
 
-def learn_hmm(observations, n_components, n_iter=1000, n_attempts=50):
+def learn_hmm(observations, n_components, n_iter=10, n_attempts=50):
 	# swap observations randomly
 	observations = np.array(observations)
 	observations = observations[np.random.permutation(len(observations))]
@@ -69,9 +69,7 @@ def learn_hmm(observations, n_components, n_iter=1000, n_attempts=50):
 	# To find the best model, we try to fit the model multiple times with different random seeds. We then choose the model with the highest score.
 	# Unfortunately, training the model is very slow. Another strategy could be performing a BFS over the space of possible models (by training each model incrementally and ordering the models by their score), but hmmlearn seems not to support this at the moment.
 
-	#for attempt in tqdm(range(n_attempts), desc='Learning HMM'):
-	# DEBUG/perf: only most promising attempt
-	for attempt in tqdm([14], desc='Learning HMM'):
+	for attempt in tqdm(range(n_attempts), desc='Learning HMM'):
 		model = hmm.CategoricalHMM(n_components=n_components, n_iter=n_iter, random_state=attempt, verbose=True)
 		model.fit(np.concatenate(obs_train).reshape(-1, 1), lengths=[len(observation) for observation in obs_train])
 		score = model.score(np.concatenate(obs_test).reshape(-1, 1), lengths=[len(observation) for observation in obs_test])
@@ -275,6 +273,7 @@ def main(logs_cache_flags=['load', 'store'], observations_cache_flags=['load', '
 	answer_questions(estimated_model, estimated_transitions, limiting_distributions, numeric_emissions)
 
 if __name__ == '__main__':
+	import pdb; pdb.set_trace()
 	main()
 
 # next meeting: ???
@@ -284,3 +283,4 @@ if __name__ == '__main__':
 #   symptoms: 1) sample observations are not valid according to original data, 2) answered questions have tiny probabilities, 3) predict_states outputs very unplausible sequences
 #   Are we making any systematic error? Are the data/num_iter/num_attempts too small? Does the resulting score support the low model quality?
 # - resolve DEBUG flags
+# - we should sum all probabilities in answer_questions()
