@@ -293,7 +293,7 @@ class Game:
 
 def train(game, args):
     scores = []
-    for episode in (bar := tqdm(range(2000)) if args[0] != "user" else forever()):
+    for episode in (bar := tqdm(range(2000) if args[0] != "user" else forever())):
         game.play()
 
         if episode % 1 == 0:
@@ -332,11 +332,13 @@ def profile(game, args, num_episodes=500):
 @contextmanager
 def output(file_or_fd):
     if file_or_fd is None:
+        yield None
         return
     if isinstance(file_or_fd, int):
         try:
             f = os.fdopen(file_or_fd, 'w')
         except OSError:
+            yield None
             return
     else:
         f = open(file_or_fd, 'w')
@@ -346,8 +348,9 @@ def output(file_or_fd):
 
 def output_scores(scores, scores_file_or_fd):
     with output(scores_file_or_fd) as f:
-        df = pd.DataFrame(scores)
-        df.to_csv(f, index=False, header=False)
+        if f:
+            df = pd.DataFrame(scores)
+            df.to_csv(f, index=False, header=False)
 
 
 def main(args, scores_file_or_fd=3):
@@ -402,7 +405,8 @@ def main(args, scores_file_or_fd=3):
         print("Profiling")
         profile_results = profile(game, args)
         with output(scores_file_or_fd + '_profile' if isinstance(scores_file_or_fd, str) else scores_file_or_fd + 3) as f:
-            profile_results.to_csv(f, index=False)
+            if f:
+                profile_results.to_csv(f, index=False)
 
 
 if __name__ == "__main__":
