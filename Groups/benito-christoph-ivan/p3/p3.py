@@ -315,7 +315,7 @@ def profile(game, args, num_episodes=500):
     profile_results = pd.DataFrame(columns=["episode", "state", "next_state", "time_index", "time"])
     for episode in (bar := tqdm(range(num_episodes)) if args[0] != "user" else forever()):
         game.profile_results = []
-        game.play_nongreedy(epsilon=0.5)
+        game.play_nongreedy(epsilon=0.5)  # cover more paths
         profile_results = pd.concat(
             [
                 profile_results,
