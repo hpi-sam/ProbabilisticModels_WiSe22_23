@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 This is a simple example of how to Reproduce the famous Sutton&Barton cliff maze.
 
@@ -5,7 +6,12 @@ Charts can be found in charts.py.
 
 Insights:
 - If epsilon-decay is disabled, Sarsa will always take the safe path as compared to Q-learning which is more optimistic and will take the optimal cliff path, so Sarsa will converge to a higher score.
+    Agent: learning_rate=0.1, discount_factor=0.9, epsilon=0.1, epsilon_decay=0.999
+    Sarsa: learning_rate=0.1, discount_factor=0.9, epsilon=0.1, epsilon_decay=0.999
+    QLearningAgent(env, epsilon=0.1, learning_rate=0.1, discount_factor=0.9)
+    SarsaAgent(env, epsilon=0.1, learning_rate=0.1, discount_factor=0.9)
 - If epsilon-decay is enabled, both algorithms will take the cliff path and converge with an equal speed to the optimal score.
+    TODO reproduce
 - It must be noted that these algorithms do not support transfer learning. They will relearn the optimal policy for each cell in the grid individually, even though there are only three different policies in the optimal solution. This is a great example of inefficient brute-force ML solutions. If all unknown cells were initialized with the same policy as their neighbors/average cells, the algorithms would converge much faster.
 - If after deploying the agent, the cliff is moved to the upper right corner, both algorithms will adapt with the same speed by average. If after deploying the agent, a new obstacle is added to the grid, Sarsa will initially adapt slightly faster than Q-learning, but will be less stable than Q-learning in the long run. The latter can only partially be explained by the fact that optimistic Q-learning already has explored the entire grid more thoroughly than Sarsa, so it will move more souverainly through the new cells around the obstacle. In general, if no fine-tuning or decaying for the greediness of the algorithm is possible, Q-learning should be chosen preferably in an environment that is subjected to possible adversarial laws or concept shifts. TODO find sound explanation for this. is this just a matter of choosing the right hyperparameter for epsilon?
 """
@@ -404,6 +410,6 @@ if __name__ == "__main__":
 
 
 # TODOs:
-# - why does convergence look differently than on the slides? play again with hyperparameters
+# - why does convergence look differently than on the slides? play again with hyperparameters. Why doesn't QLearning produce more errors?
 # - improve discussion of insights, see TODO above
 # - prepare charts in demonstrable form
