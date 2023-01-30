@@ -14,17 +14,14 @@ def main():
         index_col=False,
         converters={"state": ast.literal_eval, "next_state": ast.literal_eval}
     )
-
     profile_results = profile_results.sort_values(by=['state', 'next_state'])
-    profile_results = profile_results.drop(columns=['episode'])
 
+    profile_results = profile_results.drop(columns=['episode'])
     profile_results = pd.DataFrame((profile_results.groupby(['state', 'next_state']).apply(
         lambda x: fit(x['time'])
     )))
     profile_results['λ'], profile_results['stddev'] = zip(*profile_results[0])
     profile_results = profile_results.drop(columns=[0])
-
-    #print(profile_results)
 
     G = generator_matrix(profile_results)
     ld = limiting_distribution(G)
@@ -33,7 +30,7 @@ def main():
 
     visualize(profile_results)
 
-    # TODO NEXT: limiting distribution is not solvable because MC is not irreducible
+    # NOTE: Limiting distribution is only solvable if MC is irreducible!
 
 
 def fit(times):
