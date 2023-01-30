@@ -147,12 +147,12 @@ class UserAgent(Agent):
 class LearningAgent(Agent):
     """Inspired by https://gymnasium.farama.org/tutorials/blackjack_tutorial"""
 
-    def __init__(self, env, learning_rate=0.1, discount_factor=0.9, epsilon=0.1, epsilon_decay=0.999):
+    def __init__(self, env, learning_rate=None, discount_factor=None, epsilon=None, epsilon_decay=None):
         super().__init__(env)
-        self.learning_rate = learning_rate
-        self.discount_factor = discount_factor
-        self.epsilon = epsilon
-        self.epsilon_decay = epsilon_decay
+        self.learning_rate = learning_rate if learning_rate is not None else 0.1
+        self.discount_factor = discount_factor if discount_factor is not None else 0.95
+        self.epsilon = epsilon if epsilon is not None else 0.3
+        self.epsilon_decay = epsilon_decay if epsilon_decay is not None else 0.999
         self.q_values = defaultdict(lambda: np.zeros(env.action_space.n))
 
     def copy(self):
@@ -182,7 +182,7 @@ class QLearningAgent(LearningAgent):
 
 
 class SarsaAgent(LearningAgent):
-    def __init__(self, env, learning_rate=0.1, discount_factor=0.9, epsilon=0.1, epsilon_decay=0.999):
+    def __init__(self, env, learning_rate=None, discount_factor=None, epsilon=None, epsilon_decay=None):
         super().__init__(env, learning_rate, discount_factor, epsilon, epsilon_decay)
         self.next_action = None
 
@@ -297,7 +297,7 @@ def train(game, args):
         game.play()
 
         if episode % 1 == 0:
-            game.play_nongreedy()
+            #game.play_nongreedy()
             scores.append(game.score)
         if bar is not None and episode % 10 == 0:
             bar.set_description(f"Score: {np.mean(scores[-10:])}")
@@ -363,9 +363,9 @@ def main(args, scores_file_or_fd=3):
     if args[0] == "user":
         agent = UserAgent(env)
     elif args[0] == "qlearning":
-        agent = QLearningAgent(env, epsilon=0.1, learning_rate=0.01, discount_factor=0.95)
+        agent = QLearningAgent(env)
     elif args[0] == "sarsa":
-        agent = SarsaAgent(env, epsilon=0.1, learning_rate=0.01, discount_factor=0.95)
+        agent = SarsaAgent(env)
     else:
         print("Unknown algorithm:", args[0])
         sys.exit(1)
