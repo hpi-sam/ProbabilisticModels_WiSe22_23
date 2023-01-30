@@ -145,7 +145,7 @@ class UserAgent(Agent):
 
 
 class LearningAgent(Agent):
-    """Inspired by https://gymnasium.farama.org/tutorials/blackjack_tutorial"""
+    """Inspired by https://gymnasium.farama.org/v0.27.0/tutorials/blackjack_tutorial"""
 
     def __init__(self, env, learning_rate=None, discount_factor=None, epsilon=None, epsilon_decay=None):
         super().__init__(env)
