@@ -1,0 +1,5 @@
+__pycache__/
+
+# Microsoft Office
+~$*.pptx
+~$*.xlsx
